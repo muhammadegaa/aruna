@@ -1,5 +1,5 @@
 import { IndustryModule, KpiDefinition, VisualDefinition, Period } from "../types";
-import { getTransactions, getEntities } from "../../firestore/business";
+import { getTransactions, getEntities } from "../../data/businesses";
 
 const computeRevenueTotal = async (args: {
   businessId: string;

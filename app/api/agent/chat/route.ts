@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callAgentModelWithTools, ChatMessage, ToolDefinition } from "@/lib/openrouter";
-import { getBusiness } from "@/lib/firestore/business";
+import { getBusiness, addAgentLog } from "@/lib/data/businesses";
 import { getIndustryModule } from "@/lib/industry/registry";
 import {
   getKpiSummary,
@@ -105,9 +105,15 @@ const TOOLS: ToolDefinition[] = [
 ];
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let businessId: string | undefined;
+  let userMessage: string | undefined;
+  
   try {
     const body = await request.json();
-    const { businessId, business: businessData, message, history = [], userId } = body;
+    const { businessId: bid, business: businessData, message, history = [], userId } = body;
+    businessId = bid;
+    userMessage = message;
 
     // Log request for debugging
     console.log("AGENT REQUEST", {
@@ -201,6 +207,7 @@ IMPORTANT RULES:
     let finalMessages: ChatMessage[] = [...messages];
     let maxIterations = 5;
     let iteration = 0;
+    const toolsUsed: string[] = [];
 
     // Tool calling loop
     while (iteration < maxIterations) {
@@ -245,6 +252,10 @@ IMPORTANT RULES:
           let toolResult: { success: boolean; data?: unknown; error?: string };
 
           try {
+            if (!toolsUsed.includes(name)) {
+              toolsUsed.push(name);
+            }
+            
             switch (name) {
               case "get_kpi_summary":
                 toolResult = await getKpiSummary(
@@ -323,12 +334,25 @@ IMPORTANT RULES:
     const assistantMessages = finalMessages.filter((m) => m.role === "assistant");
     const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
     const responseMessage = lastAssistantMessage?.content || "I apologize, but I couldn't generate a response.";
+    const durationMs = Date.now() - startTime;
+
+    // Log agent interaction (async, don't await)
+    if (businessId && userMessage) {
+      addAgentLog(businessId, {
+        userMessage: userMessage,
+        agentReplySummary: responseMessage.substring(0, 200), // First 200 chars
+        toolsUsed,
+        success: true,
+        durationMs,
+      }).catch((err) => console.error("Failed to log agent interaction:", err));
+    }
 
     return NextResponse.json({
       message: responseMessage,
       dashboardUpdate,
     });
   } catch (error) {
+    const durationMs = Date.now() - (startTime || Date.now());
     console.error("AGENT ERROR", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
@@ -348,6 +372,19 @@ IMPORTANT RULES:
       } else {
         errorMessage = error.message;
       }
+    }
+
+    // Log failed interaction (async, don't await)
+    if (businessId && userMessage) {
+      addAgentLog(businessId, {
+        userMessage: userMessage,
+        agentReplySummary: errorMessage,
+        toolsUsed: [],
+        success: false,
+        errorCode,
+        errorMessage,
+        durationMs,
+      }).catch((err) => console.error("Failed to log agent error:", err));
     }
 
     return NextResponse.json(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createBusiness } from "@/lib/firestore/business";
+import { createBusiness } from "@/lib/data/businesses";
 import Workspace from "@/components/workspace/Workspace";
 import { seedPadelBusiness, seedFnbBusiness } from "@/lib/seed";
 import { Plus, Building2, Loader2, LogOut } from "lucide-react";
@@ -11,25 +11,57 @@ import StaggerContainer from "@/components/animations/StaggerContainer";
 import StaggerItem from "@/components/animations/StaggerItem";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinesses } from "@/hooks/useBusinesses";
+import { useOrganizations } from "@/hooks/useOrganizations";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: authLoading, error: authError, signOut } = useAuth();
-  const { businesses, isLoading: businessesLoading, refreshBusinesses } = useBusinesses(user);
+  const { organizations, isLoading: orgsLoading, createOrg } = useOrganizations(user);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const { businesses, isLoading: businessesLoading, refreshBusinesses } = useBusinesses(user, selectedOrgId);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load persisted business selection from localStorage
+  // Auto-create organization if user has none (backward compatibility)
   useEffect(() => {
-    if (typeof window !== "undefined" && !selectedBusinessId) {
-      const persisted = localStorage.getItem("selectedBusinessId");
-      if (persisted && businesses.some((b) => b.id === persisted)) {
-        setSelectedBusinessId(persisted);
+    if (!orgsLoading && organizations.length === 0 && user && !selectedOrgId) {
+      createOrg(`${user.email?.split("@")[0] || "My"}'s Organization`, "free")
+        .then((orgId) => {
+          setSelectedOrgId(orgId);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("selectedOrgId", orgId);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to create organization:", err);
+          setError("Failed to initialize organization. Please refresh.");
+        });
+    } else if (organizations.length > 0 && !selectedOrgId) {
+      // Use first organization
+      const firstOrg = organizations[0];
+      setSelectedOrgId(firstOrg.id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("selectedOrgId", firstOrg.id);
       }
     }
-  }, [businesses, selectedBusinessId]);
+  }, [orgsLoading, organizations, user, selectedOrgId, createOrg]);
+
+  // Load persisted selections from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const persistedOrgId = localStorage.getItem("selectedOrgId");
+      if (persistedOrgId && organizations.some((o) => o.id === persistedOrgId)) {
+        setSelectedOrgId(persistedOrgId);
+      }
+      
+      const persistedBusinessId = localStorage.getItem("selectedBusinessId");
+      if (persistedBusinessId && businesses.some((b) => b.id === persistedBusinessId)) {
+        setSelectedBusinessId(persistedBusinessId);
+      }
+    }
+  }, [organizations, businesses]);
 
   // Redirect to sign-in if not authenticated (after loading completes)
   useEffect(() => {
@@ -44,6 +76,11 @@ export default function DashboardPage() {
       return;
     }
 
+    if (!selectedOrgId) {
+      setError("Please wait for organization to load");
+      return;
+    }
+
     setIsCreating(true);
     setError(null);
 
@@ -53,13 +90,14 @@ export default function DashboardPage() {
         type,
         currency: "IDR",
         ownerUid: user.uid,
+        orgId: selectedOrgId, // Associate with organization
       });
 
       // Seed sample data
       if (type === "padel") {
-        await seedPadelBusiness(businessId);
+        await seedPadelBusiness(businessId, selectedOrgId);
       } else {
-        await seedFnbBusiness(businessId);
+        await seedFnbBusiness(businessId, selectedOrgId);
       }
 
       // Refresh businesses list

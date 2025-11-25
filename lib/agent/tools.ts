@@ -1,5 +1,5 @@
 import { getIndustryModule } from "../industry/registry";
-import { getBusiness, getTransactions, getFinancialConfig, getEntities } from "../firestore/business";
+import { getBusiness, getTransactions, getFinancialConfig, getEntities } from "../data/businesses";
 import { Period } from "../industry/types";
 import { Timestamp } from "firebase/firestore";
 

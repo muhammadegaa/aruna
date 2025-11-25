@@ -2,9 +2,10 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { User } from "firebase/auth";
-import { getBusinessesByOwner } from "@/lib/firestore/business";
+import { getBusinessesByOrg } from "@/lib/data/businesses";
+import { Business } from "@/lib/firestore/types";
 
-export function useBusinesses(user: User | null) {
+export function useBusinesses(user: User | null, orgId: string | null) {
   const queryClient = useQueryClient();
 
   const {
@@ -12,18 +13,18 @@ export function useBusinesses(user: User | null) {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["businesses", user?.uid],
+    queryKey: ["businesses", orgId],
     queryFn: async () => {
-      if (!user?.uid) return [];
-      return await getBusinessesByOwner(user.uid);
+      if (!orgId) return [];
+      return await getBusinessesByOrg(orgId);
     },
-    enabled: !!user?.uid,
+    enabled: !!orgId,
     staleTime: 30 * 1000, // 30 seconds
   });
 
   const refreshBusinesses = async () => {
-    if (user?.uid) {
-      await queryClient.invalidateQueries({ queryKey: ["businesses", user.uid] });
+    if (orgId) {
+      await queryClient.invalidateQueries({ queryKey: ["businesses", orgId] });
     }
   };
 
@@ -34,4 +35,3 @@ export function useBusinesses(user: User | null) {
     refreshBusinesses,
   };
 }
-

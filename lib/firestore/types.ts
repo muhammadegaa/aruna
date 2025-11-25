@@ -1,11 +1,27 @@
 import { Timestamp } from "firebase/firestore";
 
+export type Organization = {
+  id: string;
+  name: string;
+  ownerUid: string;
+  plan: "free" | "pro";
+  createdAt: Timestamp;
+  stripeCustomerId?: string;
+};
+
+export type OrganizationMember = {
+  id: string;
+  role: "owner" | "admin" | "analyst";
+  joinedAt: Timestamp;
+};
+
 export type Business = {
   id: string;
   name: string;
   type: "padel" | "fnb";
   currency: string;
   ownerUid: string;
+  orgId: string; // Organization this business belongs to
   createdAt: Timestamp;
 };
 
@@ -43,3 +59,14 @@ export type MetricDaily = {
   metadata?: Record<string, unknown>;
 };
 
+export type AgentLog = {
+  id: string;
+  timestamp: Timestamp;
+  userMessage: string;
+  agentReplySummary: string;
+  toolsUsed: string[];
+  success: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  durationMs: number;
+};

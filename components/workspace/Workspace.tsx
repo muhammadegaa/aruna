@@ -5,7 +5,7 @@ import VisualPanel from "./VisualPanel";
 import ChatPanel from "./ChatPanel";
 import Sidebar from "./Sidebar";
 import { WidgetConfig } from "@/lib/agent/tools";
-import { getBusiness } from "@/lib/firestore/business";
+import { getBusiness } from "@/lib/data/businesses";
 import { Business } from "@/lib/firestore/types";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";

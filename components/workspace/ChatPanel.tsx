@@ -57,7 +57,7 @@ export default function ChatPanel({
       }));
 
       // Fetch business data from client-side (where we have auth)
-      const { getBusiness } = await import("@/lib/firestore/business");
+      const { getBusiness } = await import("@/lib/data/businesses");
       const business = await getBusiness(businessId);
       
       if (!business) {

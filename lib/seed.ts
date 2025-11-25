@@ -1,16 +1,34 @@
-import { addEntity, addTransaction, setFinancialConfig } from "./firestore/business";
+import { addEntity, addTransaction, setFinancialConfig } from "./data/businesses";
 import { Timestamp } from "firebase/firestore";
 
-// Generate random date within last 30 days
-const randomDate = (daysAgo: number = 0): Date => {
+// Generate random date within specified range
+const randomDate = (daysAgo: number = 0, maxDaysAgo: number = 90): Date => {
   const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  date.setHours(Math.floor(Math.random() * 24));
+  const daysBack = Math.floor(Math.random() * (maxDaysAgo - daysAgo)) + daysAgo;
+  date.setDate(date.getDate() - daysBack);
+  
+  // More realistic time distribution: peak hours 10-22, less activity 0-9
+  const hour = Math.random() < 0.7 
+    ? Math.floor(Math.random() * 13) + 10 // 70% chance: 10-22
+    : Math.floor(Math.random() * 10); // 30% chance: 0-9
+  date.setHours(hour);
   date.setMinutes(Math.floor(Math.random() * 60));
   return date;
 };
 
-export const seedPadelBusiness = async (businessId: string): Promise<void> => {
+// Generate date with weekday/weekend distribution
+const randomDateWithWeekday = (daysAgo: number = 0, maxDaysAgo: number = 90): Date => {
+  const date = randomDate(daysAgo, maxDaysAgo);
+  // Adjust for weekends (more activity on weekends for padel)
+  const dayOfWeek = date.getDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    // Weekend: shift to peak hours (12-20)
+    date.setHours(Math.floor(Math.random() * 9) + 12);
+  }
+  return date;
+};
+
+export const seedPadelBusiness = async (businessId: string, orgId: string): Promise<void> => {
   // Create 4 padel courts
   const courts = ["Court 1", "Court 2", "Court 3", "Court 4"];
   for (const courtName of courts) {
@@ -24,11 +42,15 @@ export const seedPadelBusiness = async (businessId: string): Promise<void> => {
     });
   }
 
-  // Create sample bookings (transactions) for last 30 days
-  for (let i = 0; i < 60; i++) {
-    const date = randomDate(Math.floor(Math.random() * 30));
+  // Create sample bookings (transactions) for last 90 days with realistic distribution
+  const numBookings = 180; // ~2 bookings per day average
+  for (let i = 0; i < numBookings; i++) {
+    const date = randomDateWithWeekday(0, 90);
     const court = courts[Math.floor(Math.random() * courts.length)];
-    const hours = Math.random() > 0.5 ? 1 : 2; // 1 or 2 hour bookings
+    // More 2-hour bookings during peak hours (12-20)
+    const hour = date.getHours();
+    const isPeakHour = hour >= 12 && hour <= 20;
+    const hours = isPeakHour && Math.random() > 0.3 ? 2 : Math.random() > 0.5 ? 1 : 2;
     const revenue = 150000 * hours;
 
     await addTransaction(businessId, {
@@ -53,7 +75,7 @@ export const seedPadelBusiness = async (businessId: string): Promise<void> => {
   });
 };
 
-export const seedFnbBusiness = async (businessId: string): Promise<void> => {
+export const seedFnbBusiness = async (businessId: string, orgId: string): Promise<void> => {
   // Create menu items (entities)
   const menuItems = [
     { name: "Nasi Goreng", price: 35000, cost: 12000 },
@@ -76,9 +98,17 @@ export const seedFnbBusiness = async (businessId: string): Promise<void> => {
     });
   }
 
-  // Create sample sales (transactions) for last 30 days
-  for (let i = 0; i < 200; i++) {
-    const date = randomDate(Math.floor(Math.random() * 30));
+  // Create sample sales (transactions) for last 90 days with realistic distribution
+  const numSales = 600; // ~6-7 sales per day average
+  for (let i = 0; i < numSales; i++) {
+    const date = randomDate(0, 90);
+    // More sales during meal times (11-14, 18-21)
+    const hour = date.getHours();
+    const isMealTime = (hour >= 11 && hour <= 14) || (hour >= 18 && hour <= 21);
+    if (isMealTime && Math.random() > 0.3) {
+      date.setHours(Math.floor(Math.random() * (isMealTime ? 4 : 2)) + (hour >= 18 ? 18 : 11));
+    }
+    
     const item = menuItems[Math.floor(Math.random() * menuItems.length)];
     const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 items
     const revenue = item.price * quantity;
