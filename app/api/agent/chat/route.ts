@@ -164,11 +164,13 @@ IMPORTANT RULES:
     // Tool calling loop
     while (iteration < maxIterations) {
       iteration++;
-      const response = await callAgentModelWithTools(finalMessages, TOOLS);
+      try {
+        const response = await callAgentModelWithTools(finalMessages, TOOLS);
 
-      if (response.choices.length === 0) {
-        break;
-      }
+        if (response.choices.length === 0) {
+          console.warn("No choices in OpenRouter response");
+          break;
+        }
 
       const choice = response.choices[0];
       const assistantMessage = choice.message;
@@ -246,13 +248,24 @@ IMPORTANT RULES:
         // Final response received
         break;
       }
+      } catch (toolError) {
+        console.error("Error in tool calling loop:", toolError);
+        // If we have at least one assistant message, use it
+        const existingMessages = finalMessages.filter((m) => m.role === "assistant");
+        if (existingMessages.length > 0) {
+          break;
+        }
+        throw toolError;
+      }
     }
 
-    // Extract assistant messages for response
+    // Extract the last assistant message (final response)
     const assistantMessages = finalMessages.filter((m) => m.role === "assistant");
+    const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
+    const responseMessage = lastAssistantMessage?.content || "I apologize, but I couldn't generate a response.";
 
     return NextResponse.json({
-      messages: assistantMessages,
+      message: responseMessage,
       dashboardUpdate,
     });
   } catch (error) {
