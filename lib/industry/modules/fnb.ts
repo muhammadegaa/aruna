@@ -81,18 +81,15 @@ const computeGrossMargin = async (args: {
     from: startDate,
     to: endDate,
   });
-  
-  // For F&B, assume cost of goods sold (COGS) is tracked in expense transactions with category "cogs"
-  const allExpenseTransactions = await getTransactions(businessId, {
-    kind: "expense",
-    from: startDate,
-    to: endDate,
-  });
-  const cogsTransactions = allExpenseTransactions.filter((t) => t.category === "cogs");
 
+  // Calculate COGS from transaction metadata (cost stored per transaction)
   const revenue = revenueTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const cogs = cogsTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const cogs = revenueTransactions.reduce((sum, t) => {
+    const cost = (t.metadata as any)?.cost as number | undefined;
+    return sum + (cost || 0);
+  }, 0);
   
+  // Gross Margin = (Revenue - COGS) / Revenue * 100
   const grossProfit = revenue - cogs;
   const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
 
@@ -108,8 +105,58 @@ const computeTopMenuItems = async (args: {
   from?: string;
   to?: string;
 }): Promise<{ value: number; unit: string; trend?: "up" | "down" | "flat"; trendPercent?: number }> => {
-  // This is a placeholder - actual implementation would aggregate by menuItemId
-  return { value: 0, unit: "items" };
+  const { businessId, period, from, to } = args;
+  
+  const now = new Date();
+  let startDate: Date;
+  let endDate = now;
+  
+  if (period === "today") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "week") {
+    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if (period === "month") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    startDate = from ? new Date(from) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    endDate = to ? new Date(to) : now;
+  }
+
+  const transactions = await getTransactions(businessId, {
+    kind: "revenue",
+    from: startDate,
+    to: endDate,
+  });
+
+  // Aggregate by menuItemId
+  const menuItemStats = new Map<string, { revenue: number; count: number; name: string }>();
+  
+  transactions.forEach((t) => {
+    const menuItemId = (t.metadata as any)?.menuItemId as string | undefined;
+    const menuItemName = (t.metadata as any)?.menuItem as string | undefined;
+    const revenue = t.amount;
+    
+    if (menuItemId || menuItemName) {
+      const key = menuItemId || menuItemName || "unknown";
+      const existing = menuItemStats.get(key) || { revenue: 0, count: 0, name: menuItemName || "Unknown" };
+      menuItemStats.set(key, {
+        revenue: existing.revenue + revenue,
+        count: existing.count + 1,
+        name: existing.name || menuItemName || "Unknown",
+      });
+    }
+  });
+
+  // Count unique menu items with revenue > 0
+  const topItems = Array.from(menuItemStats.values())
+    .filter((item) => item.revenue > 0)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5); // Top 5
+
+  return {
+    value: topItems.length,
+    unit: "items",
+  };
 };
 
 const kpis: KpiDefinition[] = [

@@ -25,49 +25,76 @@ service cloud.firestore {
     
     // Organizations collection
     match /organizations/{orgId} {
-      // Users can read/write if they are members
-      allow read, write: if isOrgMember(orgId);
+      // Allow authenticated users to create organizations (they set themselves as owner)
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      
+      // Users can read if they are members
+      allow read: if isOrgMember(orgId);
+      
+      // Users can update/delete if they are the owner
+      allow update, delete: if isSignedIn() && 
+        (resource.data.ownerUid == request.auth.uid || isOrgMember(orgId));
       
       // Members subcollection
       match /members/{userId} {
+        // Allow creating membership if user is creating their own (during org creation)
+        // OR if they're already an org member (for adding others)
+        allow create: if isSignedIn() && (
+          (userId == request.auth.uid && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerUid == request.auth.uid) ||
+          isOrgMember(orgId)
+        );
+        
         // Users can read members if they are org members
-        // Only owners/admins can write (enforced at application level)
         allow read: if isOrgMember(orgId);
-        allow write: if isOrgMember(orgId);
+        
+        // Users can update/delete members if they are org members (owner/admin only in practice)
+        allow update, delete: if isOrgMember(orgId);
       }
     }
     
     // Businesses collection - org-scoped access
     match /businesses/{businessId} {
-      // Users can read/write businesses if they are members of the business's organization
+      // Allow creating businesses if user is a member of the orgId in the request
+      allow create: if isSignedIn() && 
+        request.resource.data.orgId != null &&
+        isOrgMember(request.resource.data.orgId);
+      
+      // Users can read businesses if they are members of the business's organization
       // Also allow server-side reads temporarily (for API routes without Admin SDK)
       allow read: if isBusinessOrgMember(businessId) || request.auth == null;
-      allow write: if isBusinessOrgMember(businessId);
+      
+      // Users can update/delete businesses if they are members of the business's organization
+      allow update, delete: if isBusinessOrgMember(businessId);
       
       // All subcollections inherit the same org membership check
       match /entities/{entityId} {
+        allow create: if isSignedIn() && isBusinessOrgMember(businessId);
         allow read: if isBusinessOrgMember(businessId) || request.auth == null;
-        allow write: if isBusinessOrgMember(businessId);
+        allow update, delete: if isBusinessOrgMember(businessId);
       }
       
       match /transactions/{transactionId} {
+        allow create: if isSignedIn() && isBusinessOrgMember(businessId);
         allow read: if isBusinessOrgMember(businessId) || request.auth == null;
-        allow write: if isBusinessOrgMember(businessId);
+        allow update, delete: if isBusinessOrgMember(businessId);
       }
       
       match /config/{configId} {
+        allow create: if isSignedIn() && isBusinessOrgMember(businessId);
         allow read: if isBusinessOrgMember(businessId) || request.auth == null;
-        allow write: if isBusinessOrgMember(businessId);
+        allow update, delete: if isBusinessOrgMember(businessId);
       }
       
       match /metricsDaily/{metricId} {
+        allow create: if isSignedIn() && isBusinessOrgMember(businessId);
         allow read: if isBusinessOrgMember(businessId) || request.auth == null;
-        allow write: if isBusinessOrgMember(businessId);
+        allow update, delete: if isBusinessOrgMember(businessId);
       }
       
       match /agentLogs/{logId} {
+        allow create: if isSignedIn() && isBusinessOrgMember(businessId);
         allow read: if isBusinessOrgMember(businessId) || request.auth == null;
-        allow write: if isBusinessOrgMember(businessId);
+        allow update, delete: if isBusinessOrgMember(businessId);
       }
     }
   }

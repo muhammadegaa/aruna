@@ -1,4 +1,4 @@
-import { addEntity, addTransaction, setFinancialConfig } from "./data/businesses";
+import { addEntity, addTransaction, setFinancialConfig, getEntities } from "./data/businesses";
 import { Timestamp } from "firebase/firestore";
 
 // Generate random date within specified range
@@ -31,8 +31,10 @@ const randomDateWithWeekday = (daysAgo: number = 0, maxDaysAgo: number = 90): Da
 export const seedPadelBusiness = async (businessId: string, orgId: string): Promise<void> => {
   // Create 4 padel courts
   const courts = ["Court 1", "Court 2", "Court 3", "Court 4"];
+  const courtEntities: { id: string; name: string }[] = [];
+  
   for (const courtName of courts) {
-    await addEntity(businessId, {
+    const entityId = await addEntity(businessId, {
       name: courtName,
       type: "court",
       metadata: {
@@ -40,13 +42,17 @@ export const seedPadelBusiness = async (businessId: string, orgId: string): Prom
         hourlyRate: 150000,
       },
     });
+    courtEntities.push({ id: entityId, name: courtName });
   }
 
   // Create sample bookings (transactions) for last 90 days with realistic distribution
   const numBookings = 180; // ~2 bookings per day average
+  
   for (let i = 0; i < numBookings; i++) {
     const date = randomDateWithWeekday(0, 90);
-    const court = courts[Math.floor(Math.random() * courts.length)];
+    const courtEntity = courtEntities[Math.floor(Math.random() * courtEntities.length)];
+    if (!courtEntity) continue;
+    
     // More 2-hour bookings during peak hours (12-20)
     const hour = date.getHours();
     const isPeakHour = hour >= 12 && hour <= 20;
@@ -57,11 +63,13 @@ export const seedPadelBusiness = async (businessId: string, orgId: string): Prom
       kind: "revenue",
       amount: revenue,
       date: Timestamp.fromDate(date),
-      description: `Booking: ${court} (${hours}h)`,
+      description: `Booking: ${courtEntity.name} (${hours}h)`,
       metadata: {
-        entityId: court,
+        entityId: courtEntity.id,
+        courtId: courtEntity.id,
+        court: courtEntity.name,
         hours,
-        court,
+        hour: date.getHours(), // Store hour for occupancy calculation
       },
     });
   }
@@ -86,8 +94,10 @@ export const seedFnbBusiness = async (businessId: string, orgId: string): Promis
     { name: "Kopi Hitam", price: 12000, cost: 3000 },
   ];
 
+  const menuItemEntities: { id: string; name: string; price: number; cost: number }[] = [];
+  
   for (const item of menuItems) {
-    await addEntity(businessId, {
+    const entityId = await addEntity(businessId, {
       name: item.name,
       type: "menu_item",
       metadata: {
@@ -96,6 +106,7 @@ export const seedFnbBusiness = async (businessId: string, orgId: string): Promis
         margin: item.price - item.cost,
       },
     });
+    menuItemEntities.push({ id: entityId, name: item.name, price: item.price, cost: item.cost });
   }
 
   // Create sample sales (transactions) for last 90 days with realistic distribution
@@ -109,18 +120,19 @@ export const seedFnbBusiness = async (businessId: string, orgId: string): Promis
       date.setHours(Math.floor(Math.random() * (isMealTime ? 4 : 2)) + (hour >= 18 ? 18 : 11));
     }
     
-    const item = menuItems[Math.floor(Math.random() * menuItems.length)];
+    const itemEntity = menuItemEntities[Math.floor(Math.random() * menuItemEntities.length)];
     const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 items
-    const revenue = item.price * quantity;
-    const cost = item.cost * quantity;
+    const revenue = itemEntity.price * quantity;
+    const cost = itemEntity.cost * quantity;
 
     await addTransaction(businessId, {
       kind: "revenue",
       amount: revenue,
       date: Timestamp.fromDate(date),
-      description: `${item.name} x${quantity}`,
+      description: `${itemEntity.name} x${quantity}`,
       metadata: {
-        menuItem: item.name,
+        menuItemId: itemEntity.id, // Store entity ID for aggregation
+        menuItem: itemEntity.name,
         quantity,
         cost,
         margin: revenue - cost,

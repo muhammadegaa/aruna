@@ -211,24 +211,49 @@ export const getOccupancySummary = async (
     // Initialize matrix: [courtIndex][hourIndex] = count of bookings
     const matrix: number[][] = courtIds.map(() => hours.map(() => 0));
 
+    // Calculate occupancy: for each court and hour, count bookings
     transactions.forEach((transaction) => {
-      const courtId = transaction.metadata?.courtId as string | undefined;
-      const hour = transaction.metadata?.hour as number | undefined;
+      const courtId = (transaction.metadata as any)?.courtId as string | undefined;
+      const courtName = (transaction.metadata as any)?.court as string | undefined;
+      const hour = (transaction.metadata as any)?.hour as number | undefined;
+      const bookingHours = ((transaction.metadata as any)?.hours as number) || 1;
       
-      if (courtId && hour !== undefined) {
-        const courtIndex = courtIds.indexOf(courtId);
+      // Find court by ID or name
+      let courtIndex = -1;
+      if (courtId) {
+        courtIndex = courtIds.indexOf(courtId);
+      } else if (courtName) {
+        const court = padelCourts.find((c) => c.name === courtName || c.id === courtName);
+        if (court) {
+          courtIndex = courtIds.indexOf(court.id);
+        }
+      }
+      
+      if (courtIndex >= 0 && hour !== undefined && hour >= 8 && hour <= 22) {
         const hourIndex = hours.indexOf(hour);
-        
-        if (courtIndex >= 0 && hourIndex >= 0) {
-          matrix[courtIndex][hourIndex]++;
+        if (hourIndex >= 0) {
+          // Add booking hours to the matrix
+          for (let h = 0; h < bookingHours && hour + h <= 22; h++) {
+            const currentHourIndex = hours.indexOf(hour + h);
+            if (currentHourIndex >= 0) {
+              matrix[courtIndex][currentHourIndex] += 1;
+            }
+          }
         }
       }
     });
 
-    // Convert counts to occupancy rates (assuming 1 booking per hour slot)
-    // For simplicity, we'll return counts and let the frontend normalize
+    // Calculate occupancy percentage: booked hours / total possible hours
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
+    const totalPossibleSlots = days; // One slot per hour per day per court
+    
     const occupancyMatrix = matrix.map((courtRow) =>
-      courtRow.map((count) => Math.min(100, (count / 7) * 100)) // Assume 7 days in period, normalize to percentage
+      courtRow.map((count) => {
+        // Occupancy = (count of bookings) / (total days in period) * 100
+        // Since each booking is 1 hour slot, count represents booked slots
+        const occupancyPercent = totalPossibleSlots > 0 ? (count / totalPossibleSlots) * 100 : 0;
+        return Math.min(100, Math.max(0, Math.round(occupancyPercent * 100) / 100));
+      })
     );
 
     return {
