@@ -1,5 +1,6 @@
-import { addEntity, addTransaction, setFinancialConfig, getEntities } from "./data/businesses";
-import { Timestamp } from "firebase/firestore";
+import { addEntity, addTransaction, setFinancialConfig } from "./data/businesses";
+import { Timestamp, writeBatch, doc } from "firebase/firestore";
+import { getFirestoreInstance } from "./firebase";
 
 // Generate random date within specified range
 const randomDate = (daysAgo: number = 0, maxDaysAgo: number = 90): Date => {
@@ -111,7 +112,17 @@ export const seedFnbBusiness = async (businessId: string, orgId: string): Promis
 
   // Create sample sales (transactions) for last 90 days with realistic distribution
   const numSales = 600; // ~6-7 sales per day average
-  for (let i = 0; i < numSales; i++) {
+  
+  // Batch create transactions for performance
+  const db = getFirestoreInstance();
+  const batchSize = 50;
+  const batches: Array<Promise<void>> = [];
+  
+  for (let batchStart = 0; batchStart < numSales; batchStart += batchSize) {
+    const batch = writeBatch(db);
+    const batchEnd = Math.min(batchStart + batchSize, numSales);
+    
+    for (let i = batchStart; i < batchEnd; i++) {
     const date = randomDate(0, 90);
     // More sales during meal times (11-14, 18-21)
     const hour = date.getHours();
@@ -120,25 +131,31 @@ export const seedFnbBusiness = async (businessId: string, orgId: string): Promis
       date.setHours(Math.floor(Math.random() * (isMealTime ? 4 : 2)) + (hour >= 18 ? 18 : 11));
     }
     
-    const itemEntity = menuItemEntities[Math.floor(Math.random() * menuItemEntities.length)];
-    const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 items
-    const revenue = itemEntity.price * quantity;
-    const cost = itemEntity.cost * quantity;
+      const itemEntity = menuItemEntities[Math.floor(Math.random() * menuItemEntities.length)];
+      const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 items
+      const revenue = itemEntity.price * quantity;
+      const cost = itemEntity.cost * quantity;
 
-    await addTransaction(businessId, {
-      kind: "revenue",
-      amount: revenue,
-      date: Timestamp.fromDate(date),
-      description: `${itemEntity.name} x${quantity}`,
-      metadata: {
-        menuItemId: itemEntity.id, // Store entity ID for aggregation
-        menuItem: itemEntity.name,
-        quantity,
-        cost,
-        margin: revenue - cost,
-      },
-    });
+      const transactionRef = doc(db, "businesses", businessId, "transactions", `temp_${i}`);
+      batch.set(transactionRef, {
+        kind: "revenue",
+        amount: revenue,
+        date: Timestamp.fromDate(date),
+        description: `${itemEntity.name} x${quantity}`,
+        metadata: {
+          menuItemId: itemEntity.id,
+          menuItem: itemEntity.name,
+          quantity,
+          cost,
+          margin: revenue - cost,
+        },
+      });
+    }
+    
+    batches.push(batch.commit());
   }
+  
+  await Promise.all(batches);
 
   // Set financial config
   await setFinancialConfig(businessId, {

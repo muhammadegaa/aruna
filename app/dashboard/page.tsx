@@ -13,6 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBusinesses } from "@/hooks/useBusinesses";
 import { useOrganizations } from "@/hooks/useOrganizations";
 import { useRouter } from "next/navigation";
+import { TrendingUp, Package } from "lucide-react";
+import BusinessCard from "@/components/dashboard/BusinessCard";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -23,6 +25,16 @@ export default function DashboardPage() {
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load persisted orgId immediately from localStorage (don't wait for queries)
+  useEffect(() => {
+    if (typeof window !== "undefined" && !selectedOrgId) {
+      const persistedOrgId = localStorage.getItem("selectedOrgId");
+      if (persistedOrgId) {
+        setSelectedOrgId(persistedOrgId);
+      }
+    }
+  }, []);
 
   // Auto-create organization if user has none (backward compatibility)
   useEffect(() => {
@@ -49,20 +61,15 @@ export default function DashboardPage() {
     }
   }, [orgsLoading, organizations, user, selectedOrgId, createOrg, isCreating]);
 
-  // Load persisted selections from localStorage
+  // Load persisted business selection
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const persistedOrgId = localStorage.getItem("selectedOrgId");
-      if (persistedOrgId && organizations.some((o) => o.id === persistedOrgId)) {
-        setSelectedOrgId(persistedOrgId);
-      }
-      
+    if (typeof window !== "undefined" && businesses.length > 0) {
       const persistedBusinessId = localStorage.getItem("selectedBusinessId");
       if (persistedBusinessId && businesses.some((b) => b.id === persistedBusinessId)) {
         setSelectedBusinessId(persistedBusinessId);
       }
     }
-  }, [organizations, businesses]);
+  }, [businesses]);
 
   // Redirect to sign-in if not authenticated (after loading completes)
   useEffect(() => {
@@ -290,54 +297,81 @@ export default function DashboardPage() {
         </AnimatePresence>
 
         {businessesLoading || orgsLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-2" />
-              <p className="text-sm text-neutral-500">Loading your businesses...</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl border border-neutral-200 p-6 animate-pulse">
+                <div className="h-4 bg-neutral-200 rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-neutral-200 rounded w-1/2 mb-2"></div>
+                <div className="h-4 bg-neutral-200 rounded w-full"></div>
+              </div>
+            ))}
           </div>
         ) : businesses.length > 0 ? (
-          <ScrollReveal delay={0.2}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mb-8 bg-white rounded-xl border border-neutral-200 p-6 shadow-soft"
-            >
-              <h2 className="text-lg font-semibold text-neutral-900 mb-4">Your Businesses</h2>
-              <StaggerContainer className="space-y-3">
-                {businesses.map((business) => (
-                  <StaggerItem key={business.id}>
-                    <motion.button
-                      whileHover={{ scale: 1.02, x: 4 }}
-                      whileTap={{ scale: 0.98 }}
+          <>
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-xl border border-neutral-200 p-6 shadow-soft"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-neutral-600">Total Businesses</h3>
+                  <Building2 className="w-5 h-5 text-primary-600" />
+                </div>
+                <div className="text-3xl font-bold text-neutral-900">{businesses.length}</div>
+                <div className="text-sm text-neutral-500 mt-1">Active businesses</div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-xl border border-neutral-200 p-6 shadow-soft"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-neutral-600">Industries</h3>
+                  <Package className="w-5 h-5 text-success-600" />
+                </div>
+                <div className="text-3xl font-bold text-neutral-900">
+                  {new Set(businesses.map((b) => b.type)).size}
+                </div>
+                <div className="text-sm text-neutral-500 mt-1">Different types</div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-xl border border-neutral-200 p-6 shadow-soft"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-neutral-600">Organization</h3>
+                  <TrendingUp className="w-5 h-5 text-primary-600" />
+                </div>
+                <div className="text-lg font-bold text-neutral-900 truncate">
+                  {organizations[0]?.name || "—"}
+                </div>
+                <div className="text-sm text-neutral-500 mt-1">Current workspace</div>
+              </motion.div>
+            </div>
+
+            {/* Business Cards Grid */}
+            <ScrollReveal delay={0.2}>
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold text-neutral-900 mb-4">Your Businesses</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {businesses.map((business) => (
+                    <BusinessCard
+                      key={business.id}
+                      business={business}
                       onClick={() => setSelectedBusinessId(business.id)}
-                      className="w-full flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-3">
-                        <motion.div
-                          whileHover={{ rotate: [0, -10, 10, 0] }}
-                          className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center"
-                        >
-                          <Building2 className="w-5 h-5 text-primary-600" />
-                        </motion.div>
-                        <div>
-                          <div className="font-medium text-neutral-900">{business.name}</div>
-                          <div className="text-sm text-neutral-500 capitalize">{business.type}</div>
-                        </div>
-                      </div>
-                      <motion.div
-                        whileHover={{ rotate: 90 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <Plus className="w-5 h-5 text-neutral-400" />
-                      </motion.div>
-                    </motion.button>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </motion.div>
-          </ScrollReveal>
+                    />
+                  ))}
+                </div>
+              </div>
+            </ScrollReveal>
+          </>
         ) : null}
 
         <ScrollReveal delay={0.3}>
