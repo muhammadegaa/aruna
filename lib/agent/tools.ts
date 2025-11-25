@@ -66,7 +66,8 @@ export const getKpiSummary = async (
 export const getPaybackProjection = async (businessId: string): Promise<ToolResult> => {
   try {
     const config = await getFinancialConfig(businessId);
-    if (!config || !config.initialCapex) {
+    const initialCapex = config?.initialCapex;
+    if (!config || !initialCapex || typeof initialCapex !== "number") {
       return {
         success: true,
         data: {
@@ -84,7 +85,7 @@ export const getPaybackProjection = async (businessId: string): Promise<ToolResu
     const totalExpenses = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
     const totalNetProfit = totalRevenue - totalExpenses;
 
-    const currentProgressRatio = Math.min(1, Math.max(0, totalNetProfit / config.initialCapex));
+    const currentProgressRatio = Math.min(1, Math.max(0, totalNetProfit / initialCapex));
 
     // Estimate months to payback based on average monthly net profit
     let estimatedMonthsToPayback: number | null = null;
@@ -105,7 +106,7 @@ export const getPaybackProjection = async (businessId: string): Promise<ToolResu
       if (monthsElapsed > 0) {
         const avgMonthlyProfit = totalNetProfit / monthsElapsed;
         if (avgMonthlyProfit > 0) {
-          const remainingCapex = config.initialCapex - totalNetProfit;
+          const remainingCapex = initialCapex - totalNetProfit;
           estimatedMonthsToPayback = remainingCapex / avgMonthlyProfit;
           assumptions.push(`Based on average monthly profit of ${avgMonthlyProfit.toFixed(0)} IDR`);
         } else {
