@@ -12,10 +12,21 @@ type KpiCardsProps = {
 };
 
 export default function KpiCards({ kpis }: KpiCardsProps) {
-  if (!kpis || kpis.length === 0) {
+  if (!kpis || !Array.isArray(kpis) || kpis.length === 0) {
     return (
       <div className="p-4 text-neutral-500 text-center bg-white rounded-xl border border-neutral-200">
         No KPI data available
+      </div>
+    );
+  }
+
+  // Filter out invalid KPIs
+  const validKpis = kpis.filter((kpi) => kpi && (kpi.value !== undefined || kpi.value !== null));
+  
+  if (validKpis.length === 0) {
+    return (
+      <div className="p-4 text-neutral-500 text-center bg-white rounded-xl border border-neutral-200">
+        No valid KPI data available
       </div>
     );
   }
@@ -34,7 +45,7 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
 
   return (
     <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {kpis.map((kpi, index) => (
+      {validKpis.map((kpi, index) => (
         <StaggerItem key={kpi.id}>
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}

@@ -311,6 +311,44 @@ IMPORTANT RULES:
               : JSON.stringify({ error: toolResult.error }),
             tool_call_id: toolCall.id,
           });
+
+          // Auto-create widgets for certain tools
+          if (toolResult.success && toolResult.data) {
+            if (name === "get_kpi_summary") {
+              const kpiData = toolResult.data as { kpis?: unknown[]; period?: { from: string; to: string } };
+              if (kpiData.kpis && Array.isArray(kpiData.kpis) && kpiData.kpis.length > 0) {
+                if (!dashboardUpdate) {
+                  dashboardUpdate = { widgets: [] };
+                }
+                const hasKpiCards = dashboardUpdate.widgets.some((w) => w.visualId === "kpi_cards");
+                if (!hasKpiCards) {
+                  dashboardUpdate.widgets.push({
+                    visualId: "kpi_cards",
+                    props: { kpis: kpiData.kpis },
+                  });
+                }
+              }
+            } else if (name === "get_occupancy_summary") {
+              const occData = toolResult.data as { courts?: string[]; hours?: number[]; matrix?: number[][] };
+              if (occData.courts && occData.matrix) {
+                if (!dashboardUpdate) {
+                  dashboardUpdate = { widgets: [] };
+                }
+                const hasHeatmap = dashboardUpdate.widgets.some((w) => w.visualId === "occupancy_heatmap");
+                if (!hasHeatmap) {
+                  dashboardUpdate.widgets.push({
+                    visualId: "occupancy_heatmap",
+                    props: {
+                      courts: occData.courts,
+                      hours: occData.hours || [],
+                      matrix: occData.matrix,
+                      title: "Court Occupancy Heatmap",
+                    },
+                  });
+                }
+              }
+            }
+          }
         }
 
         // Continue loop to get final response
