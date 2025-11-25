@@ -60,3 +60,7 @@ export default function GenericTable({ columns, rows, title }: GenericTableProps
 
 
 
+
+
+
+

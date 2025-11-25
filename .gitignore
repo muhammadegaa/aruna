@@ -40,9 +40,3 @@ next-env.d.ts
 .idea
 *.swp
 *.swo
-*~
-
-# Firebase
-.firebase/
-firebase-debug.log
-firestore-debug.log

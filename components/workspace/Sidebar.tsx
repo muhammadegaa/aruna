@@ -110,3 +110,7 @@ export default function Sidebar({ business, onBack }: SidebarProps) {
 }
 
 
+
+
+
+
