@@ -237,8 +237,8 @@ IMPORTANT RULES:
           }
 
           // Ensure businessId is always from the request, not from args
-          const toolBusinessId = (args.businessId as string) || businessId;
-          if (!toolBusinessId || toolBusinessId !== businessId) {
+          const toolBusinessIdFromArgs = args.businessId as string | undefined;
+          if (toolBusinessIdFromArgs && toolBusinessIdFromArgs !== businessId) {
             console.warn(`Tool ${name} called with different businessId, using request businessId`);
           }
 
