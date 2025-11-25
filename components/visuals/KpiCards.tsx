@@ -72,13 +72,13 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
             </div>
             
             {/* Value */}
-            <div className="flex-1 flex items-end mb-3">
-              <div className="w-full">
-                <div className="text-2xl font-bold text-neutral-900 leading-tight break-words overflow-hidden">
+            <div className="flex-1 flex items-end mb-3 min-h-[3.5rem]">
+              <div className="w-full overflow-hidden">
+                <div className="text-2xl font-bold text-neutral-900 leading-tight break-words overflow-hidden text-ellipsis">
                   {formattedValue}
                 </div>
                 {kpi.unit && kpi.unit !== "IDR" && kpi.unit !== "USD" && kpi.unit !== "%" && (
-                  <div className="text-xs text-neutral-500 mt-1">{kpi.unit}</div>
+                  <div className="text-xs text-neutral-500 mt-1 truncate">{kpi.unit}</div>
                 )}
               </div>
             </div>

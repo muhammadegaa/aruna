@@ -31,9 +31,9 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center group-hover:bg-primary-200 transition-colors">
             <Building2 className="w-6 h-6 text-primary-600" />
           </div>
-          <div>
-            <h3 className="font-semibold text-neutral-900 mb-1">{business.name}</h3>
-            <span className="text-xs px-2 py-1 bg-neutral-100 text-neutral-600 rounded-md capitalize">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-neutral-900 mb-1 truncate">{business.name}</h3>
+            <span className="text-xs px-2 py-1 bg-neutral-100 text-neutral-600 rounded-md capitalize inline-block">
               {business.type}
             </span>
           </div>
@@ -53,7 +53,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
               <TrendingUp className="w-4 h-4" />
               <span>Revenue</span>
             </div>
-            <div className="text-lg font-bold text-neutral-900">
+            <div className="text-lg font-bold text-neutral-900 truncate ml-2">
               {formatCurrency(metrics.totalRevenue, business.currency)}
             </div>
           </div>

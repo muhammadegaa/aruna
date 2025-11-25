@@ -101,8 +101,8 @@ export default function OccupancyHeatmap({
   };
 
   return (
-    <div className="p-6">
-      <ReactECharts option={option} style={{ height: "500px", width: "100%" }} />
+    <div className="p-4 sm:p-6">
+      <ReactECharts option={option} style={{ height: "450px", width: "100%", minHeight: "400px" }} />
     </div>
   );
 }

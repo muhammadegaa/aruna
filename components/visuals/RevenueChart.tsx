@@ -83,8 +83,8 @@ export default function RevenueChart({ points, title = "Revenue Over Time" }: Re
   };
 
   return (
-    <div className="p-6">
-      <ReactECharts option={option} style={{ height: "400px", width: "100%" }} />
+    <div className="p-4 sm:p-6">
+      <ReactECharts option={option} style={{ height: "350px", width: "100%", minHeight: "300px" }} />
     </div>
   );
 }
