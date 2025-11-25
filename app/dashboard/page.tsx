@@ -26,8 +26,9 @@ export default function DashboardPage() {
 
   // Auto-create organization if user has none (backward compatibility)
   useEffect(() => {
-    if (!orgsLoading && organizations.length === 0 && user && !selectedOrgId) {
-      createOrg(`${user.email?.split("@")[0] || "My"}'s Organization`, "free")
+    if (!orgsLoading && organizations.length === 0 && user && !selectedOrgId && !isCreating) {
+      const orgName = user.email?.split("@")[0] || "My";
+      createOrg(`${orgName}'s Organization`, "free")
         .then((orgId) => {
           setSelectedOrgId(orgId);
           if (typeof window !== "undefined") {
@@ -38,7 +39,7 @@ export default function DashboardPage() {
           console.error("Failed to create organization:", err);
           setError("Failed to initialize organization. Please refresh.");
         });
-    } else if (organizations.length > 0 && !selectedOrgId) {
+    } else if (organizations.length > 0 && !selectedOrgId && !isCreating) {
       // Use first organization
       const firstOrg = organizations[0];
       setSelectedOrgId(firstOrg.id);
@@ -46,7 +47,7 @@ export default function DashboardPage() {
         localStorage.setItem("selectedOrgId", firstOrg.id);
       }
     }
-  }, [orgsLoading, organizations, user, selectedOrgId, createOrg]);
+  }, [orgsLoading, organizations, user, selectedOrgId, createOrg, isCreating]);
 
   // Load persisted selections from localStorage
   useEffect(() => {
@@ -288,9 +289,12 @@ export default function DashboardPage() {
           )}
         </AnimatePresence>
 
-        {businessesLoading ? (
+        {businessesLoading || orgsLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-2" />
+              <p className="text-sm text-neutral-500">Loading your businesses...</p>
+            </div>
           </div>
         ) : businesses.length > 0 ? (
           <ScrollReveal delay={0.2}>

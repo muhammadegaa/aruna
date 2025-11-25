@@ -33,26 +33,31 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
   };
 
   return (
-    <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {kpis.map((kpi, index) => (
         <StaggerItem key={kpi.id}>
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="bg-white rounded-xl shadow-soft border border-neutral-200 p-6 hover:shadow-medium hover:border-primary-200 transition-all"
+            className="bg-white rounded-xl shadow-soft border border-neutral-200 p-6 hover:shadow-medium hover:border-primary-200 transition-all h-full flex flex-col"
           >
-            <div className="text-sm font-medium text-neutral-600 mb-2">{kpi.label}</div>
-            <div className="flex items-baseline gap-2 mb-3">
-              <div className="text-3xl font-bold text-neutral-900">
+            <div className="text-sm font-medium text-neutral-600 mb-2 truncate">{kpi.label}</div>
+            <div className="flex items-baseline gap-2 mb-3 min-h-[3rem]">
+              <div className="text-3xl font-bold text-neutral-900 break-words">
                 {typeof kpi.value === "number"
-                  ? kpi.unit === "IDR" || kpi.unit === "USD" || kpi.unit.includes("currency")
-                    ? formatCurrency(kpi.value, kpi.unit === "IDR" ? "IDR" : "USD")
-                    : kpi.unit === "%"
-                    ? formatPercentage(kpi.value)
-                    : formatNumber(kpi.value)
-                  : kpi.value}
+                  ? (() => {
+                      const unit = kpi.unit || "";
+                      if (unit === "IDR" || unit === "USD" || (typeof unit === "string" && unit.includes("currency"))) {
+                        return formatCurrency(kpi.value, unit === "IDR" ? "IDR" : "USD");
+                      } else if (unit === "%") {
+                        return formatPercentage(kpi.value);
+                      } else {
+                        return formatNumber(kpi.value);
+                      }
+                    })()
+                  : String(kpi.value || "—")}
               </div>
               {kpi.unit && kpi.unit !== "IDR" && kpi.unit !== "USD" && kpi.unit !== "%" && (
-                <div className="text-sm text-neutral-500 font-medium">{kpi.unit}</div>
+                <div className="text-sm text-neutral-500 font-medium whitespace-nowrap">{kpi.unit}</div>
               )}
             </div>
             {kpi.trend && (
