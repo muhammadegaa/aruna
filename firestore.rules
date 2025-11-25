@@ -16,6 +16,7 @@ service cloud.firestore {
     // Businesses collection
     match /businesses/{businessId} {
       // Users can read their own businesses
+      // Note: Server-side API routes will need to pass userId for verification
       allow read: if isAuthenticated() && 
                      (resource == null || resource.data.ownerUid == request.auth.uid);
       

@@ -56,10 +56,22 @@ export default function ChatPanel({
         content: m.content,
       }));
 
+      // Get ID token for authentication
+      let idToken: string | undefined;
+      if (typeof window !== "undefined" && userId) {
+        const { getAuthInstance } = await import("@/lib/firebase");
+        const auth = getAuthInstance();
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          idToken = await currentUser.getIdToken();
+        }
+      }
+
       const response = await fetch("/api/agent/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(idToken && { Authorization: `Bearer ${idToken}` }),
         },
         body: JSON.stringify({
           businessId,
