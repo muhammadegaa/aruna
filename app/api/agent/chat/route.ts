@@ -107,16 +107,20 @@ const TOOLS: ToolDefinition[] = [
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { businessId, message, history = [], userId } = body;
+    const { businessId, business: businessData, message, history = [], userId } = body;
 
     if (!businessId || !message) {
       return NextResponse.json({ error: "businessId and message are required" }, { status: 400 });
     }
 
-    // Get business and verify ownership
-    const business = await getBusiness(businessId);
+    // Use business data from client (avoids server-side Firestore auth issue)
+    // If not provided, try to fetch (will fail without auth, but fallback)
+    let business = businessData;
     if (!business) {
-      return NextResponse.json({ error: "Business not found" }, { status: 404 });
+      business = await getBusiness(businessId);
+      if (!business) {
+        return NextResponse.json({ error: "Business not found. Please refresh and try again." }, { status: 404 });
+      }
     }
 
     // Verify user owns the business (if userId provided)

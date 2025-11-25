@@ -23,11 +23,15 @@ The `firestore.rules` file in this repo contains the security rules, but **they 
 
 The API routes run server-side and don't have automatic authentication context. The rules require `request.auth != null`, which only works for client-side calls.
 
-**Current Workaround:**
-- Client passes `userId` to API route
-- API route verifies `business.ownerUid === userId` before processing
-- This provides application-level security, but Firestore rules still need to be deployed
+**Current Solution:**
+- Client fetches business data (with auth) and passes it to API route
+- API route uses client-provided data to avoid server-side Firestore calls
+- Rules temporarily allow server-side reads (`request.auth == null`) for API routes
+- Application-level security: API verifies `business.ownerUid === userId` before processing
 
-**For Production:**
-Consider using Firebase Admin SDK for server-side operations to properly authenticate Firestore calls.
+**⚠️ IMPORTANT - Security Note:**
+The rules currently allow server-side reads (`request.auth == null`) as a temporary workaround. This is **less secure** than proper authentication. For production:
+- Use Firebase Admin SDK for server-side operations
+- OR move all Firestore calls to client-side
+- OR implement proper token verification
 

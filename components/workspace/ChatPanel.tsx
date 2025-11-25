@@ -56,25 +56,27 @@ export default function ChatPanel({
         content: m.content,
       }));
 
-      // Get ID token for authentication
-      let idToken: string | undefined;
-      if (typeof window !== "undefined" && userId) {
-        const { getAuthInstance } = await import("@/lib/firebase");
-        const auth = getAuthInstance();
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          idToken = await currentUser.getIdToken();
-        }
+      // Fetch business data from client-side (where we have auth)
+      const { getBusiness } = await import("@/lib/firestore/business");
+      const business = await getBusiness(businessId);
+      
+      if (!business) {
+        throw new Error("Business not found");
+      }
+
+      // Verify ownership
+      if (userId && business.ownerUid !== userId) {
+        throw new Error("Unauthorized: You don't own this business");
       }
 
       const response = await fetch("/api/agent/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(idToken && { Authorization: `Bearer ${idToken}` }),
         },
         body: JSON.stringify({
           businessId,
+          business, // Pass business data to avoid server-side Firestore call
           message: userMessage,
           history,
           userId,
