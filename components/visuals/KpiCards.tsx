@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { motion } from "framer-motion";
 import StaggerContainer from "@/components/animations/StaggerContainer";
 import StaggerItem from "@/components/animations/StaggerItem";
+import { formatCurrency, formatNumber, formatPercentage } from "@/lib/formatters";
 
 type KpiCardsProps = {
   kpis: KpiResult[];
@@ -43,10 +44,16 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
             <div className="flex items-baseline gap-2 mb-3">
               <div className="text-3xl font-bold text-neutral-900">
                 {typeof kpi.value === "number"
-                  ? kpi.value.toLocaleString("id-ID")
+                  ? kpi.unit === "IDR" || kpi.unit === "USD" || kpi.unit.includes("currency")
+                    ? formatCurrency(kpi.value, kpi.unit === "IDR" ? "IDR" : "USD")
+                    : kpi.unit === "%"
+                    ? formatPercentage(kpi.value)
+                    : formatNumber(kpi.value)
                   : kpi.value}
               </div>
-              <div className="text-sm text-neutral-500 font-medium">{kpi.unit}</div>
+              {kpi.unit && kpi.unit !== "IDR" && kpi.unit !== "USD" && kpi.unit !== "%" && (
+                <div className="text-sm text-neutral-500 font-medium">{kpi.unit}</div>
+              )}
             </div>
             {kpi.trend && (
               <motion.div
@@ -57,7 +64,7 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
               >
                 {getTrendIcon(kpi.trend)}
                 {kpi.trendPercent !== undefined
-                  ? `${kpi.trendPercent > 0 ? "+" : ""}${kpi.trendPercent.toFixed(1)}%`
+                  ? formatPercentage(kpi.trendPercent > 0 ? kpi.trendPercent : -kpi.trendPercent)
                   : ""}
               </motion.div>
             )}

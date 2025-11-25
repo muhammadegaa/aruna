@@ -7,6 +7,7 @@ import OccupancyHeatmap from "../visuals/OccupancyHeatmap";
 import GenericTable from "../visuals/GenericTable";
 import MenuMarginChart from "../visuals/MenuMarginChart";
 import { Sparkles } from "lucide-react";
+import { ErrorBoundary } from "../ErrorBoundary";
 
 type VisualPanelProps = {
   widgets: WidgetConfig[];
@@ -85,7 +86,18 @@ export default function VisualPanel({ widgets }: VisualPanelProps) {
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">
       <div className="space-y-6">
-        {widgets.map(renderWidget)}
+        {widgets.map((widget, index) => (
+          <ErrorBoundary
+            key={`${widget.visualId}-${index}`}
+            fallback={
+              <div className="p-4 text-error-600 bg-error-50 rounded-lg border border-error-200">
+                Failed to render visualization: {widget.visualId}
+              </div>
+            }
+          >
+            {renderWidget(widget, index)}
+          </ErrorBoundary>
+        ))}
       </div>
     </div>
   );

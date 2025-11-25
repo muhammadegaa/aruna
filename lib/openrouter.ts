@@ -43,6 +43,15 @@ export type OpenRouterResponse = {
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
+// Runtime validation
+if (!OPENROUTER_API_KEY && typeof window === "undefined") {
+  // Server-side: throw error if missing
+  throw new Error(
+    "OPENROUTER_API_KEY is required. Please set it in your .env.local file. " +
+    "Get your API key from https://openrouter.ai/keys"
+  );
+}
+
 if (!OPENROUTER_API_KEY) {
   console.warn("OPENROUTER_API_KEY is not set. Agent functionality will be limited.");
 }
