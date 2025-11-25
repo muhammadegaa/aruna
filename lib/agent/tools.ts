@@ -243,16 +243,15 @@ export const getOccupancySummary = async (
       }
     });
 
-    // Calculate occupancy percentage: booked hours / total possible hours
+    // Calculate occupancy percentage: bookings per hour slot / total possible slots for that hour
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
-    const totalPossibleSlots = days; // One slot per hour per day per court
-    
+    // For each hour slot, total possible = number of days (each court can be booked once per day per hour)
+    // So occupancy = (count of bookings for this court+hour) / (days in period) * 100
     const occupancyMatrix = matrix.map((courtRow) =>
       courtRow.map((count) => {
-        // Occupancy = (count of bookings) / (total days in period) * 100
-        // Since each booking is 1 hour slot, count represents booked slots
-        const occupancyPercent = totalPossibleSlots > 0 ? (count / totalPossibleSlots) * 100 : 0;
-        return Math.min(100, Math.max(0, Math.round(occupancyPercent * 100) / 100));
+        // Occupancy = (number of bookings for this court+hour) / (days in period) * 100
+        const occupancyPercent = days > 0 ? (count / days) * 100 : 0;
+        return Math.min(100, Math.max(0, Math.round(occupancyPercent * 10) / 10)); // Round to 1 decimal
       })
     );
 
