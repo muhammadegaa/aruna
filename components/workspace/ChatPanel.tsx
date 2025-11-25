@@ -160,15 +160,20 @@ export default function ChatPanel({
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Header */}
-      <div className="border-b border-neutral-200 p-4 bg-gradient-primary text-white">
-        <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5" />
-          <h2 className="font-semibold">Aruna AI</h2>
+      <div className="border-b border-neutral-200 px-6 py-4 bg-white flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
+            <Bot className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-neutral-900">Aruna AI</h2>
+            <p className="text-xs text-neutral-500">Your business intelligence assistant</p>
+          </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         <AnimatePresence>
           {messages.map((message, index) => (
             <motion.div
@@ -214,8 +219,8 @@ export default function ChatPanel({
       </div>
 
       {/* Input */}
-      <div className="border-t border-neutral-200 p-4">
-        <div className="flex gap-2">
+      <div className="border-t border-neutral-200 px-6 py-4 bg-neutral-50 flex-shrink-0">
+        <div className="flex gap-3">
           <input
             ref={inputRef}
             type="text"
@@ -223,13 +228,13 @@ export default function ChatPanel({
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask about your business metrics..."
-            className="flex-1 px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="flex-1 px-4 py-3 bg-white border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
             disabled={isLoading}
           />
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="px-5 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 shadow-sm"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />

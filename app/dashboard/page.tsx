@@ -95,18 +95,22 @@ export default function DashboardPage() {
         orgId: selectedOrgId,
       });
 
-      // Seed sample data
-      if (type === "padel") {
-        await seedPadelBusiness(businessId, selectedOrgId);
-      } else {
-        await seedFnbBusiness(businessId, selectedOrgId);
-      }
-
-      await refreshBusinesses();
+      // Redirect immediately - seed in background
       setSelectedBusinessId(businessId);
-      
       if (typeof window !== "undefined") {
         localStorage.setItem("selectedBusinessId", businessId);
+      }
+      await refreshBusinesses();
+
+      // Seed in background (non-blocking)
+      if (type === "padel") {
+        seedPadelBusiness(businessId, selectedOrgId).catch((err) => {
+          console.error("Background seeding failed:", err);
+        });
+      } else {
+        seedFnbBusiness(businessId, selectedOrgId).catch((err) => {
+          console.error("Background seeding failed:", err);
+        });
       }
     } catch (error) {
       console.error("Failed to create demo business:", error);
@@ -115,7 +119,6 @@ export default function DashboardPage() {
           ? error.message
           : "Failed to create demo business. Please try again."
       );
-    } finally {
       setIsCreating(false);
     }
   };
