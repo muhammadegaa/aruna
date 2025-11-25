@@ -115,15 +115,6 @@ export async function POST(request: NextRequest) {
     businessId = bid;
     userMessage = message;
 
-    // Log request for debugging
-    console.log("AGENT REQUEST", {
-      businessId,
-      hasMessage: !!message,
-      messageLength: message?.length || 0,
-      hasBusinessData: !!businessData,
-      userId: userId?.substring(0, 8) + "...",
-    });
-
     // Validate required fields
     if (!businessId || typeof businessId !== "string" || businessId.trim() === "") {
       return NextResponse.json(
@@ -172,8 +163,6 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
-
-    console.log("Business verified:", { businessId, type: business.type, name: business.name });
 
     const industryModule = getIndustryModule(business.type);
     if (!industryModule) {

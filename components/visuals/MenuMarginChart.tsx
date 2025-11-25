@@ -13,8 +13,9 @@ export default function MenuMarginChart({
 }: MenuMarginChartProps) {
   if (!items || items.length === 0) {
     return (
-      <div className="p-4 text-gray-500 text-center">
-        No menu margin data available
+      <div className="p-8 text-center">
+        <div className="text-neutral-400 mb-2">🍽️</div>
+        <p className="text-neutral-500 text-sm">No menu margin data available for this period</p>
       </div>
     );
   }
@@ -35,6 +36,10 @@ export default function MenuMarginChart({
       },
       formatter: (params: any) => {
         const param = params[0];
+        const item = items.find((i) => i.name === param.name);
+        if (item) {
+          return `${param.name}<br/>Margin: ${param.value.toFixed(1)}%<br/>Revenue: ${item.revenue.toLocaleString("id-ID")} IDR`;
+        }
         return `${param.name}<br/>Margin: ${param.value.toFixed(1)}%`;
       },
     },

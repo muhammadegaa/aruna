@@ -17,8 +17,9 @@ export default function OccupancyHeatmap({
 }: OccupancyHeatmapProps) {
   if (!courts || !hours || !matrix || courts.length === 0 || hours.length === 0) {
     return (
-      <div className="p-4 text-gray-500 text-center">
-        No occupancy data available
+      <div className="p-8 text-center">
+        <div className="text-neutral-400 mb-2">🏸</div>
+        <p className="text-neutral-500 text-sm">No occupancy data available for this period</p>
       </div>
     );
   }

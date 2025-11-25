@@ -9,8 +9,9 @@ type GenericTableProps = {
 export default function GenericTable({ columns, rows, title }: GenericTableProps) {
   if (!columns || columns.length === 0 || !rows || rows.length === 0) {
     return (
-      <div className="p-4 text-gray-500 text-center">
-        No table data available
+      <div className="p-8 text-center">
+        <div className="text-neutral-400 mb-2">📋</div>
+        <p className="text-neutral-500 text-sm">No table data available</p>
       </div>
     );
   }

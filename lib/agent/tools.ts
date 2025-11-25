@@ -16,8 +16,6 @@ export const getKpiSummary = async (
   to?: string
 ): Promise<ToolResult> => {
   try {
-    console.log("TOOL:get_kpi_summary", { businessId, period, from, to });
-    
     if (!businessId || businessId.trim() === "") {
       return { success: false, error: "Business ID is required" };
     }
@@ -36,10 +34,6 @@ export const getKpiSummary = async (
     const kpiResults = await Promise.all(
       industryModule.kpis.map((kpi) => kpi.compute({ businessId, period, from, to }))
     );
-
-    console.log("TOOL:get_kpi_summary result", {
-      businessId,
-      kpiCount: kpiResults.length,
       hasData: kpiResults.some((k) => k.value !== 0),
     });
 
@@ -78,8 +72,6 @@ export const getKpiSummary = async (
 
 export const getPaybackProjection = async (businessId: string): Promise<ToolResult> => {
   try {
-    console.log("TOOL:get_payback_projection", { businessId });
-    
     if (!businessId || businessId.trim() === "") {
       return { success: false, error: "Business ID is required" };
     }
@@ -159,8 +151,6 @@ export const getOccupancySummary = async (
   to?: string
 ): Promise<ToolResult> => {
   try {
-    console.log("TOOL:get_occupancy_summary", { businessId, period, from, to });
-    
     if (!businessId || businessId.trim() === "") {
       return { success: false, error: "Business ID is required" };
     }

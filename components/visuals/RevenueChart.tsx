@@ -10,8 +10,9 @@ type RevenueChartProps = {
 export default function RevenueChart({ points, title = "Revenue Over Time" }: RevenueChartProps) {
   if (!points || points.length === 0) {
     return (
-      <div className="p-4 text-gray-500 text-center">
-        No revenue data available
+      <div className="p-8 text-center">
+        <div className="text-neutral-400 mb-2">📊</div>
+        <p className="text-neutral-500 text-sm">No revenue data available for this period</p>
       </div>
     );
   }
@@ -29,7 +30,14 @@ export default function RevenueChart({ points, title = "Revenue Over Time" }: Re
       trigger: "axis",
       formatter: (params: any) => {
         const param = params[0];
-        return `${param.name}<br/>${param.seriesName}: ${param.value.toLocaleString("id-ID")} IDR`;
+        const value = param.value as number;
+        if (value >= 1000000) {
+          return `${param.name}<br/>${param.seriesName}: ${(value / 1000000).toFixed(2)}M IDR`;
+        }
+        if (value >= 1000) {
+          return `${param.name}<br/>${param.seriesName}: ${(value / 1000).toFixed(1)}K IDR`;
+        }
+        return `${param.name}<br/>${param.seriesName}: ${value.toLocaleString("id-ID")} IDR`;
       },
     },
     xAxis: {

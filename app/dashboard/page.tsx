@@ -116,8 +116,6 @@ export default function DashboardPage() {
       if (typeof window !== "undefined") {
         localStorage.setItem("selectedBusinessId", businessId);
       }
-      
-      console.log("Demo business created:", { businessId, type });
     } catch (error) {
       console.error("Failed to create demo business:", error);
       setError(
