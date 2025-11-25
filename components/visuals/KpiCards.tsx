@@ -3,8 +3,6 @@
 import { KpiResult } from "@/lib/industry/types";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { motion } from "framer-motion";
-import StaggerContainer from "@/components/animations/StaggerContainer";
-import StaggerItem from "@/components/animations/StaggerItem";
 import { formatCurrency, formatNumber, formatPercentage } from "@/lib/formatters";
 
 type KpiCardsProps = {
@@ -44,50 +42,62 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
   };
 
   return (
-    <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {validKpis.map((kpi, index) => (
-        <StaggerItem key={kpi.id}>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {validKpis.map((kpi, index) => {
+        const formattedValue = typeof kpi.value === "number"
+          ? (() => {
+              const unit = kpi.unit || "";
+              if (unit === "IDR" || unit === "USD" || (typeof unit === "string" && unit.includes("currency"))) {
+                return formatCurrency(kpi.value, unit === "IDR" ? "IDR" : "USD");
+              } else if (unit === "%") {
+                return formatPercentage(kpi.value);
+              } else {
+                return formatNumber(kpi.value);
+              }
+            })()
+          : String(kpi.value || "—");
+
+        return (
           <motion.div
-            whileHover={{ y: -4, scale: 1.02 }}
-            className="bg-white rounded-xl shadow-soft border border-neutral-200 p-6 hover:shadow-medium hover:border-primary-200 transition-all h-full flex flex-col"
+            key={kpi.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            whileHover={{ y: -2 }}
+            className="bg-white rounded-lg border border-neutral-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col min-h-[140px]"
           >
-            <div className="text-sm font-medium text-neutral-600 mb-2 truncate">{kpi.label}</div>
-            <div className="flex items-baseline gap-2 mb-3 min-h-[3rem]">
-              <div className="text-3xl font-bold text-neutral-900 break-words">
-                {typeof kpi.value === "number"
-                  ? (() => {
-                      const unit = kpi.unit || "";
-                      if (unit === "IDR" || unit === "USD" || (typeof unit === "string" && unit.includes("currency"))) {
-                        return formatCurrency(kpi.value, unit === "IDR" ? "IDR" : "USD");
-                      } else if (unit === "%") {
-                        return formatPercentage(kpi.value);
-                      } else {
-                        return formatNumber(kpi.value);
-                      }
-                    })()
-                  : String(kpi.value || "—")}
-              </div>
-              {kpi.unit && kpi.unit !== "IDR" && kpi.unit !== "USD" && kpi.unit !== "%" && (
-                <div className="text-sm text-neutral-500 font-medium whitespace-nowrap">{kpi.unit}</div>
-              )}
+            {/* Label */}
+            <div className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-3 truncate">
+              {kpi.label}
             </div>
+            
+            {/* Value */}
+            <div className="flex-1 flex items-end mb-3">
+              <div className="w-full">
+                <div className="text-2xl font-bold text-neutral-900 leading-tight break-words overflow-hidden">
+                  {formattedValue}
+                </div>
+                {kpi.unit && kpi.unit !== "IDR" && kpi.unit !== "USD" && kpi.unit !== "%" && (
+                  <div className="text-xs text-neutral-500 mt-1">{kpi.unit}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Trend */}
             {kpi.trend && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${getTrendColor(kpi.trend)}`}
-              >
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium w-fit ${getTrendColor(kpi.trend)}`}>
                 {getTrendIcon(kpi.trend)}
-                {kpi.trendPercent !== undefined
-                  ? formatPercentage(kpi.trendPercent > 0 ? kpi.trendPercent : -kpi.trendPercent)
-                  : ""}
-              </motion.div>
+                <span>
+                  {kpi.trendPercent !== undefined
+                    ? `${kpi.trendPercent > 0 ? "+" : ""}${formatPercentage(Math.abs(kpi.trendPercent))}`
+                    : ""}
+                </span>
+              </div>
             )}
           </motion.div>
-        </StaggerItem>
-      ))}
-    </StaggerContainer>
+        );
+      })}
+    </div>
   );
 }
 

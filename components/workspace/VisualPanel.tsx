@@ -84,8 +84,8 @@ export default function VisualPanel({ widgets }: VisualPanelProps) {
   };
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
-      <div className="space-y-6">
+    <div className="h-full overflow-y-auto bg-neutral-50">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         {widgets.map((widget, index) => (
           <ErrorBoundary
             key={`${widget.visualId}-${index}`}
@@ -95,7 +95,9 @@ export default function VisualPanel({ widgets }: VisualPanelProps) {
               </div>
             }
           >
-            {renderWidget(widget, index)}
+            <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden">
+              {renderWidget(widget, index)}
+            </div>
           </ErrorBoundary>
         ))}
       </div>
