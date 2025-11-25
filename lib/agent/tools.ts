@@ -34,8 +34,6 @@ export const getKpiSummary = async (
     const kpiResults = await Promise.all(
       industryModule.kpis.map((kpi) => kpi.compute({ businessId, period, from, to }))
     );
-      hasData: kpiResults.some((k) => k.value !== 0),
-    });
 
     const now = new Date();
     let startDate: Date;
