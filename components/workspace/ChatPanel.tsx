@@ -84,15 +84,50 @@ export default function ChatPanel({
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to get response");
+        const errorData = await response.json().catch(() => ({ error: "UNKNOWN_ERROR", message: "Failed to get response" }));
+        const errorMessage = errorData.message || errorData.error || "Failed to get response";
+        
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `❌ Error: ${errorMessage}`,
+          },
+        ]);
+        return;
       }
 
       const data = await response.json();
 
+      // Check for error in response
+      if (data.error) {
+        const errorMessage = data.message || data.error || "An error occurred";
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `❌ Error: ${errorMessage}`,
+          },
+        ]);
+        return;
+      }
+
+      // Only show fallback if message is truly missing
+      const responseMessage = data.message;
+      if (!responseMessage || responseMessage.trim() === "") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "I apologize, but I couldn't generate a response. Please try again.",
+          },
+        ]);
+        return;
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.message || "I apologize, but I couldn't generate a response." },
+        { role: "assistant", content: responseMessage },
       ]);
 
       if (data.dashboardUpdate?.widgets) {
@@ -100,11 +135,13 @@ export default function ChatPanel({
       }
     } catch (error) {
       console.error("Chat error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to get response. Please try again.";
+      
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: `Error: ${error instanceof Error ? error.message : "Failed to get response. Please try again."}`,
+          content: `❌ Error: ${errorMessage}`,
         },
       ]);
     } finally {

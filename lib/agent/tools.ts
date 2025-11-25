@@ -16,8 +16,15 @@ export const getKpiSummary = async (
   to?: string
 ): Promise<ToolResult> => {
   try {
+    console.log("TOOL:get_kpi_summary", { businessId, period, from, to });
+    
+    if (!businessId || businessId.trim() === "") {
+      return { success: false, error: "Business ID is required" };
+    }
+
     const business = await getBusiness(businessId);
     if (!business) {
+      console.error("TOOL ERROR: Business not found", { businessId });
       return { success: false, error: "Business not found" };
     }
 
@@ -29,6 +36,12 @@ export const getKpiSummary = async (
     const kpiResults = await Promise.all(
       industryModule.kpis.map((kpi) => kpi.compute({ businessId, period, from, to }))
     );
+
+    console.log("TOOL:get_kpi_summary result", {
+      businessId,
+      kpiCount: kpiResults.length,
+      hasData: kpiResults.some((k) => k.value !== 0),
+    });
 
     const now = new Date();
     let startDate: Date;
@@ -65,6 +78,12 @@ export const getKpiSummary = async (
 
 export const getPaybackProjection = async (businessId: string): Promise<ToolResult> => {
   try {
+    console.log("TOOL:get_payback_projection", { businessId });
+    
+    if (!businessId || businessId.trim() === "") {
+      return { success: false, error: "Business ID is required" };
+    }
+
     const config = await getFinancialConfig(businessId);
     const initialCapex = config?.initialCapex;
     if (!config || !initialCapex || typeof initialCapex !== "number") {
@@ -140,6 +159,12 @@ export const getOccupancySummary = async (
   to?: string
 ): Promise<ToolResult> => {
   try {
+    console.log("TOOL:get_occupancy_summary", { businessId, period, from, to });
+    
+    if (!businessId || businessId.trim() === "") {
+      return { success: false, error: "Business ID is required" };
+    }
+
     const business = await getBusiness(businessId);
     if (!business || business.type !== "padel") {
       return { success: false, error: "Occupancy summary only available for padel businesses" };

@@ -48,6 +48,8 @@ export const seedPadelBusiness = async (businessId: string): Promise<void> => {
   await setFinancialConfig(businessId, {
     hourlyRate: 150000,
     currency: "IDR",
+    initialCapex: 50000000, // 50M IDR initial investment
+    targetPaybackMonths: 24, // 2 years target
   });
 };
 
@@ -100,5 +102,7 @@ export const seedFnbBusiness = async (businessId: string): Promise<void> => {
   await setFinancialConfig(businessId, {
     currency: "IDR",
     defaultTaxRate: 0.1, // 10%
+    initialCapex: 30000000, // 30M IDR initial investment
+    targetPaybackMonths: 18, // 1.5 years target
   });
 };

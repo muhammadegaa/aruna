@@ -109,24 +109,65 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { businessId, business: businessData, message, history = [], userId } = body;
 
-    if (!businessId || !message) {
-      return NextResponse.json({ error: "businessId and message are required" }, { status: 400 });
+    // Log request for debugging
+    console.log("AGENT REQUEST", {
+      businessId,
+      hasMessage: !!message,
+      messageLength: message?.length || 0,
+      hasBusinessData: !!businessData,
+      userId: userId?.substring(0, 8) + "...",
+    });
+
+    // Validate required fields
+    if (!businessId || typeof businessId !== "string" || businessId.trim() === "") {
+      return NextResponse.json(
+        {
+          error: "INVALID_REQUEST",
+          message: "businessId is required and must be a non-empty string",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!message || typeof message !== "string" || message.trim() === "") {
+      return NextResponse.json(
+        {
+          error: "INVALID_REQUEST",
+          message: "message is required and must be a non-empty string",
+        },
+        { status: 400 }
+      );
     }
 
     // Use business data from client (avoids server-side Firestore auth issue)
     // If not provided, try to fetch (will fail without auth, but fallback)
     let business = businessData;
     if (!business) {
+      console.warn("No business data provided, attempting server-side fetch (may fail)");
       business = await getBusiness(businessId);
       if (!business) {
-        return NextResponse.json({ error: "Business not found. Please refresh and try again." }, { status: 404 });
+        return NextResponse.json(
+          {
+            error: "BUSINESS_NOT_FOUND",
+            message: "Business not found. Please refresh and try again.",
+          },
+          { status: 404 }
+        );
       }
     }
 
     // Verify user owns the business (if userId provided)
     if (userId && business.ownerUid !== userId) {
-      return NextResponse.json({ error: "Unauthorized: You don't own this business" }, { status: 403 });
+      return NextResponse.json(
+        {
+          error: "UNAUTHORIZED",
+          message: "You don't own this business",
+        },
+        { status: 403 }
+      );
     }
+
+    console.log("Business verified:", { businessId, type: business.type, name: business.name });
 
     const industryModule = getIndustryModule(business.type);
     if (!industryModule) {
@@ -190,46 +231,65 @@ IMPORTANT RULES:
           let args: Record<string, unknown>;
           try {
             args = JSON.parse(argsStr);
-          } catch {
+          } catch (parseError) {
+            console.error("Failed to parse tool arguments:", parseError);
             args = {};
+          }
+
+          // Ensure businessId is always from the request, not from args
+          const toolBusinessId = (args.businessId as string) || businessId;
+          if (!toolBusinessId || toolBusinessId !== businessId) {
+            console.warn(`Tool ${name} called with different businessId, using request businessId`);
           }
 
           let toolResult: { success: boolean; data?: unknown; error?: string };
 
-          switch (name) {
-            case "get_kpi_summary":
-              toolResult = await getKpiSummary(
-                args.businessId as string,
-                args.period as Period,
-                args.from as string | undefined,
-                args.to as string | undefined
-              );
-              break;
-            case "get_payback_projection":
-              toolResult = await getPaybackProjection(args.businessId as string);
-              break;
-            case "get_occupancy_summary":
-              toolResult = await getOccupancySummary(
-                args.businessId as string,
-                args.period as Period,
-                args.from as string | undefined,
-                args.to as string | undefined
-              );
-              break;
-            case "update_dashboard_view":
-              const widgets = (args.widgets as Array<{ visualId: string; props?: Record<string, unknown> }>).map(
-                (w) => ({
-                  visualId: w.visualId,
-                  props: w.props || {},
-                })
-              );
-              toolResult = updateDashboardView(widgets);
-              if (toolResult.success && toolResult.data) {
-                dashboardUpdate = toolResult.data as DashboardUpdatePayload;
-              }
-              break;
-            default:
-              toolResult = { success: false, error: `Unknown tool: ${name}` };
+          try {
+            switch (name) {
+              case "get_kpi_summary":
+                toolResult = await getKpiSummary(
+                  businessId, // Always use request businessId
+                  (args.period as Period) || "month",
+                  args.from as string | undefined,
+                  args.to as string | undefined
+                );
+                break;
+              case "get_payback_projection":
+                toolResult = await getPaybackProjection(businessId); // Always use request businessId
+                break;
+              case "get_occupancy_summary":
+                toolResult = await getOccupancySummary(
+                  businessId, // Always use request businessId
+                  (args.period as Period) || "month",
+                  args.from as string | undefined,
+                  args.to as string | undefined
+                );
+                break;
+              case "update_dashboard_view":
+                const widgets = (args.widgets as Array<{ visualId: string; props?: Record<string, unknown> }>).map(
+                  (w) => ({
+                    visualId: w.visualId,
+                    props: w.props || {},
+                  })
+                );
+                toolResult = updateDashboardView(widgets);
+                if (toolResult.success && toolResult.data) {
+                  dashboardUpdate = toolResult.data as DashboardUpdatePayload;
+                }
+                break;
+              default:
+                toolResult = { success: false, error: `Unknown tool: ${name}` };
+            }
+          } catch (toolError) {
+            console.error(`TOOL EXECUTION ERROR: ${name}`, toolError);
+            toolResult = {
+              success: false,
+              error: toolError instanceof Error ? toolError.message : `Failed to execute tool: ${name}`,
+            };
+          }
+
+          if (!toolResult.success) {
+            console.warn(`Tool ${name} failed:`, toolResult.error);
           }
 
           // Add tool result to messages
@@ -269,9 +329,32 @@ IMPORTANT RULES:
       dashboardUpdate,
     });
   } catch (error) {
-    console.error("Agent API error:", error);
+    console.error("AGENT ERROR", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Determine error type
+    let errorCode = "INTERNAL_ERROR";
+    let errorMessage = "Failed to process request. Please try again.";
+
+    if (error instanceof Error) {
+      if (error.message.includes("OpenRouter") || error.message.includes("LLM")) {
+        errorCode = "LLM_CALL_FAILED";
+        errorMessage = "Failed to communicate with AI service. Please try again.";
+      } else if (error.message.includes("Business") || error.message.includes("Firestore")) {
+        errorCode = "DATA_ACCESS_ERROR";
+        errorMessage = "Failed to access business data. Please refresh and try again.";
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      {
+        error: errorCode,
+        message: errorMessage,
+      },
       { status: 500 }
     );
   }

@@ -30,6 +30,8 @@ export type FinancialConfig = {
   hourlyRate?: number;
   currency: string;
   defaultTaxRate?: number;
+  initialCapex?: number;
+  targetPaybackMonths?: number;
   [key: string]: unknown;
 };
 

@@ -21,6 +21,16 @@ export default function DashboardPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load persisted business selection from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && !selectedBusinessId) {
+      const persisted = localStorage.getItem("selectedBusinessId");
+      if (persisted && businesses.some((b) => b.id === persisted)) {
+        setSelectedBusinessId(persisted);
+      }
+    }
+  }, [businesses, selectedBusinessId]);
+
   // Redirect to sign-in if not authenticated (after loading completes)
   useEffect(() => {
     if (!authLoading && !user) {
@@ -55,6 +65,13 @@ export default function DashboardPage() {
       // Refresh businesses list
       await refreshBusinesses();
       setSelectedBusinessId(businessId);
+      
+      // Persist to localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("selectedBusinessId", businessId);
+      }
+      
+      console.log("Demo business created:", { businessId, type });
     } catch (error) {
       console.error("Failed to create demo business:", error);
       setError(
